@@ -122,6 +122,10 @@ defmodule EdgeCrdt.Context do
     end
   end
 
+  def max_for(%__MODULE__{sparse: sparse}, replica_id) do
+    Map.get(sparse, replica_id, [0]) |> List.last()
+  end
+
   @doc """
   Add new dot to context.
 

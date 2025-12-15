@@ -1,0 +1,5 @@
+%{
+  "facade": {:hex, :facade, "0.1.0", "c53bc9291e82870a373d68d177da68d5f3d1f83af9333fe6cfc496c8d418d89a", [:mix], [], "hexpm", "16503fb39a8f101a1bafe4c307d6dfd0fa452654f52ca2e9c7cf51b14908e4c1"},
+  "ok": {:hex, :ok, "2.3.0", "0a3d513ec9038504dc5359d44e14fc14ef59179e625563a1a144199cdc3a6d30", [:mix], [], "hexpm", "f0347b3f8f115bf347c704184b33cf084f2943771273f2b98a3707a5fa43c4d5"},
+  "path_map": {:hex, :path_map, "0.1.0", "16fde7baf50332a89dcdc3e683879bf04a284c8ccbe9561199771cdd8ccb4cb2", [:mix], [], "hexpm", "c7a3e650b9ef3a03d1806cf87f1ee67ab2ca633fc908d62c326d7209e01a552d"},
+}
