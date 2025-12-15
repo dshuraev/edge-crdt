@@ -59,7 +59,7 @@ defmodule EdgeCrdt.Replica do
 
     Keyword options:
      * `overwrite`: If true, overwrite existing CRDT instance. Defaults to false.
-     * `initial_state`: Initial state of the CRDT instance. Defaults to the `type.zero()` element of the CRDT type.
+     * `initial_state`: Initial state of the CRDT instance. Defaults to the `EdgeCrdt.Crdt.zero(type)` element of the CRDT type.
     """
     @spec add_crdt(t(), Crdt.id(), Crdt.type(), Keyword.t()) ::
             {:ok, t()} | {:error, :already_exists}
@@ -71,7 +71,7 @@ defmodule EdgeCrdt.Replica do
         {:error, :already_exists}
       else
         if function_exported?(type, :zero, 0) do
-          crdt = Keyword.get(opts, :initial_state, type.zero())
+          crdt = Keyword.get(opts, :initial_state, Crdt.zero(type))
           new_crdts = Map.put(crdts, id, {type, crdt, meta})
           {:ok, %__MODULE__{state | crdts: new_crdts}}
         else
@@ -160,7 +160,7 @@ defmodule EdgeCrdt.Replica do
       dot = next_dot(state)
 
       with {:ok, {crdt_mod, crdt_state, meta}} <- fetch_crdt(state, crdt_id),
-           {:ok, {crdt_state, delta}} <- crdt_mod.mutate(crdt_state, op, dot),
+           {:ok, {crdt_state, delta}} <- Crdt.mutate(crdt_mod, crdt_state, op, dot),
            {:ok, state} <- put_state(state, crdt_id, {crdt_mod, crdt_state, meta}),
            {:ok, state} <- put_component(state, crdt_id, dot, delta) do
         # persist the dot - update clock for current replica
@@ -211,7 +211,7 @@ defmodule EdgeCrdt.Replica do
         {:ok, state}
       else
         with {:ok, {crdt_mod, crdt_state, meta}} <- fetch_crdt(state, crdt_id),
-             {:ok, crdt_state} <- crdt_mod.apply_delta(crdt_state, delta, state.ctx),
+             {:ok, crdt_state} <- Crdt.apply_delta(crdt_mod, crdt_state, delta, state.ctx),
              {:ok, state} <- put_state(state, crdt_id, {crdt_mod, crdt_state, meta}),
              {:ok, state} <- put_component(state, crdt_id, dot, delta) do
           ctx = Context.add(state.ctx, dot)
