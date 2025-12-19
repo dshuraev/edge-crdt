@@ -1,9 +1,9 @@
 defmodule EdgeCrdt.Replica.State do
+  alias EdgeCrdt.Replica.Components
   alias EdgeCrdt.Context
   alias EdgeCrdt.Crdt
   alias EdgeCrdt.Dot
   alias EdgeCrdt.Replica
-  alias EdgeCrdt.Utils.OrdSet
 
   @typedoc """
   Internal state of replica.
@@ -24,9 +24,7 @@ defmodule EdgeCrdt.Replica.State do
           id: Replica.id(),
           crdts: %{Crdt.id() => {Crdt.type(), Crdt.state(), meta()}},
           ctx: Context.t(),
-          components: %{
-            Crdt.id() => %{Replica.id() => OrdSet.t({counter :: pos_integer(), Crdt.delta()})}
-          },
+          components: Components.t(),
           policy: policy()
         }
 
@@ -41,7 +39,7 @@ defmodule EdgeCrdt.Replica.State do
       id: id,
       crdts: %{},
       ctx: Context.new(),
-      components: %{},
+      components: Components.new(),
       policy: Map.new(opts)
     }
   end
@@ -180,14 +178,13 @@ defmodule EdgeCrdt.Replica.State do
   @spec put_component(t(), Crdt.id(), Dot.t(), Crdt.delta()) ::
           {:ok, t()} | {:error, term()}
   defp put_component(%__MODULE__{} = state, crdt_id, {replica_id, clock}, delta) do
-    component = {clock, delta}
+    case Components.append(state.components, crdt_id, replica_id, clock, delta) do
+      %Components{} = components ->
+        {:ok, %{state | components: components}}
 
-    PathMap.update_auto(
-      state,
-      [:components, crdt_id, replica_id],
-      OrdSet.new([component]),
-      fn set -> OrdSet.put(set, component) end
-    )
+      {:error, reason} ->
+        {:error, reason}
+    end
   end
 
   @doc """
