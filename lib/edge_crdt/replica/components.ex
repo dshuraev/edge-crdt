@@ -1,4 +1,8 @@
 defmodule EdgeCrdt.Replica.Components do
+  @moduledoc """
+  Append-only per-CRDT component log, indexed by origin replica and counter.
+  """
+
   alias EdgeCrdt.Crdt
   alias EdgeCrdt.Replica
 
@@ -17,7 +21,7 @@ defmodule EdgeCrdt.Replica.Components do
   defstruct by_crdt: %{}
 
   @spec new() :: t()
-  def new(), do: %__MODULE__{by_crdt: %{}}
+  def new, do: %__MODULE__{by_crdt: %{}}
 
   @spec append(t(), Crdt.id(), origin(), counter(), Crdt.delta()) ::
           t() | {:error, :non_monotonic | :duplicate}
@@ -56,12 +60,14 @@ defmodule EdgeCrdt.Replica.Components do
   def since(%__MODULE__{} = cs, crdt_id, origin, counter_exclusive)
       when is_binary(crdt_id) and is_binary(origin) and is_integer(counter_exclusive) and
              counter_exclusive >= 0 do
-    with %{deltas: deltas} <- cs.by_crdt |> Map.get(crdt_id, %{}) |> Map.get(origin) do
-      deltas
-      |> Enum.filter(fn {counter, _delta} -> counter > counter_exclusive end)
-      |> Enum.sort_by(fn {counter, _delta} -> counter end)
-    else
-      _ -> []
+    case cs.by_crdt |> Map.get(crdt_id, %{}) |> Map.get(origin) do
+      %{deltas: deltas} ->
+        deltas
+        |> Enum.filter(fn {counter, _delta} -> counter > counter_exclusive end)
+        |> Enum.sort_by(fn {counter, _delta} -> counter end)
+
+      _ ->
+        []
     end
   end
 
@@ -73,9 +79,8 @@ defmodule EdgeCrdt.Replica.Components do
   @spec max_counter(t(), Crdt.id(), origin()) :: non_neg_integer()
   def max_counter(%__MODULE__{} = cs, crdt_id, origin)
       when is_binary(crdt_id) and is_binary(origin) do
-    with %{max_counter: max_counter} <- cs.by_crdt |> Map.get(crdt_id, %{}) |> Map.get(origin) do
-      max_counter
-    else
+    case cs.by_crdt |> Map.get(crdt_id, %{}) |> Map.get(origin) do
+      %{max_counter: max_counter} -> max_counter
       _ -> 0
     end
   end

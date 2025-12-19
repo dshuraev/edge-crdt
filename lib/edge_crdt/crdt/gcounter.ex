@@ -1,4 +1,8 @@
 defmodule EdgeCrdt.Crdt.GCounter do
+  @moduledoc """
+  Grow-only counter CRDT (G-Counter).
+  """
+
   @behaviour EdgeCrdt.Crdt
 
   alias EdgeCrdt.Context
@@ -44,12 +48,7 @@ defmodule EdgeCrdt.Crdt.GCounter do
   def apply_delta(state, delta, %Context{}) when is_map(state) and is_map(delta) do
     state =
       Enum.reduce(delta, state, fn {replica_id, incoming}, acc_state ->
-        {:ok, acc_state} =
-          PathMap.update_auto(acc_state, [replica_id], 0, fn old ->
-            if incoming > old, do: incoming, else: old
-          end)
-
-        acc_state
+        put_max(acc_state, replica_id, incoming)
       end)
 
     {:ok, state}
@@ -67,4 +66,9 @@ defmodule EdgeCrdt.Crdt.GCounter do
 
   @impl EdgeCrdt.Crdt
   def version, do: @vsn
+
+  defp put_max(state, replica_id, incoming) do
+    {:ok, state} = PathMap.update_auto(state, [replica_id], 0, &max(&1, incoming))
+    state
+  end
 end

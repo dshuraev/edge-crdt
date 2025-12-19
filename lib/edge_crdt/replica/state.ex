@@ -1,9 +1,13 @@
 defmodule EdgeCrdt.Replica.State do
-  alias EdgeCrdt.Replica.Components
+  @moduledoc """
+  Internal state and pure update operations for `EdgeCrdt.Replica`.
+  """
+
   alias EdgeCrdt.Context
   alias EdgeCrdt.Crdt
   alias EdgeCrdt.Dot
   alias EdgeCrdt.Replica
+  alias EdgeCrdt.Replica.Components
 
   @typedoc """
   Internal state of replica.
@@ -170,14 +174,14 @@ defmodule EdgeCrdt.Replica.State do
     {id, Context.max_for(ctx, id) + 1}
   end
 
-  defp put_state(%__MODULE__{} = state, crdt_id, {crdt_mod, crdt_state, meta}) do
+  defp put_state(state = %__MODULE__{}, crdt_id, {crdt_mod, crdt_state, meta}) do
     PathMap.put_auto(state, [:crdts, crdt_id], {crdt_mod, crdt_state, meta})
   end
 
   # Store a component (delta tagged with its dot clock) keyed by CRDT and source replica.
   @spec put_component(t(), Crdt.id(), Dot.t(), Crdt.delta()) ::
           {:ok, t()} | {:error, term()}
-  defp put_component(%__MODULE__{} = state, crdt_id, {replica_id, clock}, delta) do
+  defp put_component(state = %__MODULE__{}, crdt_id, {replica_id, clock}, delta) do
     case Components.append(state.components, crdt_id, replica_id, clock, delta) do
       %Components{} = components ->
         {:ok, %{state | components: components}}

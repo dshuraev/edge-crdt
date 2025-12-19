@@ -4,7 +4,7 @@ defmodule EdgeCrdtTest.Unit.ReplicaStateTest do
   alias EdgeCrdt.Replica.State
 
   defmodule TestCrdt do
-    def zero(), do: :zero
+    def zero, do: :zero
   end
 
   defmodule NoZeroCrdt do

@@ -4,7 +4,7 @@ defmodule EdgeCrdtTest.Unit.ReplicaTest do
   alias EdgeCrdt.Replica
 
   defmodule TestCrdt do
-    def zero(), do: :zero
+    def zero, do: :zero
   end
 
   test "start_link/2 registers via Registry and exposes State APIs" do
@@ -22,4 +22,3 @@ defmodule EdgeCrdtTest.Unit.ReplicaTest do
     assert [{"crdt-1", TestCrdt, %{}}] = Replica.list_crdts(server)
   end
 end
-

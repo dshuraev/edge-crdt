@@ -1,4 +1,8 @@
 defmodule EdgeCrdt.Crdt do
+  @moduledoc """
+  Behaviour for CRDT implementations hosted by `EdgeCrdt.Replica`.
+  """
+
   use Facade
 
   alias EdgeCrdt.Context
@@ -43,12 +47,12 @@ defmodule EdgeCrdt.Crdt do
   @doc """
   Returns the lattice bottom element for the CRDT.
   """
-  defapi zero() :: state()
+  defapi(zero() :: state())
 
   @doc """
   Computes the least upper bound for two CRDT states.
   """
-  defapi join(left :: state(), right :: state()) :: result(state())
+  defapi(join(left :: state(), right :: state()) :: result(state()))
 
   @typep result(t) :: {:ok, t} | {:error, term()}
 
@@ -56,26 +60,28 @@ defmodule EdgeCrdt.Crdt do
   Applies a local operation and returns the updated state alongside the minimal
   delta that satisfies the mutation postconditions.
   """
-  defapi mutate(state :: state(), op :: op(), dot :: EdgeCrdt.Dot.t()) :: result({state(), delta()})
+  defapi(
+    mutate(state :: state(), op :: op(), dot :: EdgeCrdt.Dot.t()) :: result({state(), delta()})
+  )
 
   @doc """
   Incorporates an incoming delta into the supplied state.
   """
-  defapi apply_delta(state :: state(), delta :: delta(), ctx :: Context.t()) :: result(state())
+  defapi(apply_delta(state :: state(), delta :: delta(), ctx :: Context.t()) :: result(state()))
 
   @doc """
   Projects the internal state into a user-facing value.
   """
-  defapi value(state :: state()) :: value()
+  defapi(value(state :: state()) :: value())
 
   @doc """
   Exposes the causal context for the CRDT, if available.
   """
-  defapi context(state :: state()) :: Context.t()
+  defapi(context(state :: state()) :: Context.t())
 
   @doc """
   Returns the wire/version identifier for the CRDT implementation. Used to tag
   events and snapshots so readers can validate compatibility.
   """
-  defapi version() :: 0..0xFFFF
+  defapi(version() :: 0..0xFFFF)
 end

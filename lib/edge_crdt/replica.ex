@@ -1,4 +1,8 @@
 defmodule EdgeCrdt.Replica do
+  @moduledoc """
+  A GenServer-based replica that hosts multiple CRDT instances and their causal context.
+  """
+
   alias EdgeCrdt.Crdt
   alias EdgeCrdt.Replica.State
 

@@ -1,4 +1,6 @@
 defmodule EdgeCrdt.Utils.OrdSet do
+  @moduledoc false
+
   @compile {:inline}
 
   @type t(item) :: list(item)
