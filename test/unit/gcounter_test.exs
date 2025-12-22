@@ -1,9 +1,9 @@
 defmodule EdgeCrdtTest.Unit.GCounterTest do
   use ExUnit.Case, async: true
 
-  alias EdgeCrdt.Context
   alias EdgeCrdt.Crdt
   alias EdgeCrdt.Crdt.GCounter
+  alias EdgeCrdt.Replica.Context
 
   test "zero/0 returns a fresh counter with value 0" do
     assert 0 == Crdt.value(GCounter, Crdt.zero(GCounter))

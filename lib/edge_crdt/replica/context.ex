@@ -1,4 +1,4 @@
-defmodule EdgeCrdt.Context do
+defmodule EdgeCrdt.Replica.Context do
   @moduledoc """
   `Context` represents a summary of summary of events, both
   local and from remote actors.
@@ -19,8 +19,8 @@ defmodule EdgeCrdt.Context do
   @doc """
   Create an empty context.
 
-    iex> EdgeCrdt.Context.new()
-    %EdgeCrdt.Context{sparse: %{}}
+    iex> EdgeCrdt.Replica.Context.new()
+    %EdgeCrdt.Replica.Context{sparse: %{}}
 
   """
   @spec new :: t()
@@ -29,8 +29,8 @@ defmodule EdgeCrdt.Context do
   @doc """
   Create a new context from an enumerable of dots.
 
-    iex> EdgeCrdt.Context.new([{"a", 1}, {"b", 2}])
-    %EdgeCrdt.Context{sparse: %{"a" => [1], "b" => [2]}}
+    iex> EdgeCrdt.Replica.Context.new([{"a", 1}, {"b", 2}])
+    %EdgeCrdt.Replica.Context{sparse: %{"a" => [1], "b" => [2]}}
   """
   @spec new(Enumerable.t(Dot.t())) :: t()
   def new(enum) do
@@ -45,7 +45,7 @@ defmodule EdgeCrdt.Context do
   @doc """
   Check if dot is contained in the context.
 
-    iex> EdgeCrdt.Context.new([{"a", 1}]) |> EdgeCrdt.Context.contains?({"a", 1})
+    iex> EdgeCrdt.Replica.Context.new([{"a", 1}]) |> EdgeCrdt.Replica.Context.contains?({"a", 1})
     true
   """
   @spec contains?(t(), Dot.t()) :: boolean()
@@ -61,9 +61,9 @@ defmodule EdgeCrdt.Context do
 
   A context is equal when it has exactly the same dots, grouped per replica.
 
-    iex> a = EdgeCrdt.Context.new([{"a", 1}, {"b", 2}])
-    iex> b = EdgeCrdt.Context.new([{"b", 2}, {"a", 1}])
-    iex> EdgeCrdt.Context.eq?(a, b)
+    iex> a = EdgeCrdt.Replica.Context.new([{"a", 1}, {"b", 2}])
+    iex> b = EdgeCrdt.Replica.Context.new([{"b", 2}, {"a", 1}])
+    iex> EdgeCrdt.Replica.Context.eq?(a, b)
     true
   """
   @spec eq?(t(), t()) :: boolean()
@@ -81,9 +81,9 @@ defmodule EdgeCrdt.Context do
   @doc """
   Return `true` when the first context is a strict subset of the second.
 
-    iex> a = EdgeCrdt.Context.new([{"a", 1}])
-    iex> b = EdgeCrdt.Context.new([{"a", 1}, {"a", 2}])
-    iex> EdgeCrdt.Context.lt?(a, b)
+    iex> a = EdgeCrdt.Replica.Context.new([{"a", 1}])
+    iex> b = EdgeCrdt.Replica.Context.new([{"a", 1}, {"a", 2}])
+    iex> EdgeCrdt.Replica.Context.lt?(a, b)
     true
   """
   @spec lt?(t(), t()) :: boolean()
@@ -110,7 +110,7 @@ defmodule EdgeCrdt.Context do
   @doc """
   Returns `true` if the context is empty for all actors.
 
-    iex> EdgeCrdt.Context.new() |> EdgeCrdt.Context.empty?()
+    iex> EdgeCrdt.Replica.Context.new() |> EdgeCrdt.Replica.Context.empty?()
     true
   """
   @spec empty?(t()) :: boolean()
@@ -129,8 +129,8 @@ defmodule EdgeCrdt.Context do
   @doc """
   Add new dot to context.
 
-    iex> EdgeCrdt.Context.new([{"a", 1}]) |> EdgeCrdt.Context.add({"b", 2})
-    %EdgeCrdt.Context{sparse: %{"a" => [1], "b" => [2]}}
+    iex> EdgeCrdt.Replica.Context.new([{"a", 1}]) |> EdgeCrdt.Replica.Context.add({"b", 2})
+    %EdgeCrdt.Replica.Context{sparse: %{"a" => [1], "b" => [2]}}
   """
   @spec add(t(), Dot.t()) :: t()
   def add(ctx = %__MODULE__{sparse: sparse}, {replica, counter}) do
@@ -146,10 +146,10 @@ defmodule EdgeCrdt.Context do
   @doc """
   Merge two contexts together by taking the union of their dots.
 
-    iex> ctx_a = EdgeCrdt.Context.new([{"a", 1}])
-    iex> ctx_b = EdgeCrdt.Context.new([{"a", 2}, {"b", 1}])
-    iex> EdgeCrdt.Context.join(ctx_a, ctx_b)
-    %EdgeCrdt.Context{sparse: %{"a" => [1, 2], "b" => [1]}}
+    iex> ctx_a = EdgeCrdt.Replica.Context.new([{"a", 1}])
+    iex> ctx_b = EdgeCrdt.Replica.Context.new([{"a", 2}, {"b", 1}])
+    iex> EdgeCrdt.Replica.Context.join(ctx_a, ctx_b)
+    %EdgeCrdt.Replica.Context{sparse: %{"a" => [1, 2], "b" => [1]}}
   """
   @spec join(t(), t()) :: t()
   def join(%__MODULE__{sparse: a}, %__MODULE__{sparse: b}) do
@@ -164,13 +164,13 @@ defmodule EdgeCrdt.Context do
   @doc """
   Return a context containing dots present in `ctx` but missing in `since`.
 
-    iex> ctx = EdgeCrdt.Context.new([{"a", 1}, {"a", 2}, {"b", 1}])
-    iex> since = EdgeCrdt.Context.new([{"a", 1}])
-    iex> EdgeCrdt.Context.delta_since(ctx, since)
-    %EdgeCrdt.Context{sparse: %{"a" => [2], "b" => [1]}}
+    iex> ctx = EdgeCrdt.Replica.Context.new([{"a", 1}, {"a", 2}, {"b", 1}])
+    iex> since = EdgeCrdt.Replica.Context.new([{"a", 1}])
+    iex> EdgeCrdt.Replica.Context.since(ctx, since)
+    %EdgeCrdt.Replica.Context{sparse: %{"a" => [2], "b" => [1]}}
   """
-  @spec delta_since(t(), t()) :: t()
-  def delta_since(%__MODULE__{sparse: ctx}, %__MODULE__{sparse: since}) do
+  @spec since(t(), t()) :: t()
+  def since(%__MODULE__{sparse: ctx}, %__MODULE__{sparse: since}) do
     ctx
     |> Enum.reduce(%{}, fn {replica, set}, acc ->
       diff = OrdSet.difference(set, Map.get(since, replica, OrdSet.new()))

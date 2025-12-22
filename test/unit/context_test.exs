@@ -1,8 +1,8 @@
 defmodule EdgeCrdtTest.Unit.ContextTest do
   use ExUnit.Case, async: true
 
-  doctest EdgeCrdt.Context
-  alias EdgeCrdt.Context
+  doctest EdgeCrdt.Replica.Context
+  alias EdgeCrdt.Replica.Context
 
   describe "new/0" do
     test "creates an empty context struct" do
@@ -102,16 +102,16 @@ defmodule EdgeCrdtTest.Unit.ContextTest do
     end
   end
 
-  describe "delta_since/2" do
+  describe "since/2" do
     test "when called on empty context always returns empty context" do
-      assert Context.delta_since(Context.new(), Context.new()) |> Context.empty?()
-      assert Context.delta_since(Context.new(), Context.new([{"a", 1}])) |> Context.empty?()
+      assert Context.since(Context.new(), Context.new()) |> Context.empty?()
+      assert Context.since(Context.new(), Context.new([{"a", 1}])) |> Context.empty?()
     end
 
     test "when called with empty since-context returns original context" do
       dots = [{"a", 1}]
       context1 = Context.new(dots)
-      assert Context.delta_since(context1, Context.new()) |> Context.eq?(context1)
+      assert Context.since(context1, Context.new()) |> Context.eq?(context1)
     end
 
     test "returns dots not present in since-context" do
@@ -120,28 +120,28 @@ defmodule EdgeCrdtTest.Unit.ContextTest do
       since_dot = [{"b", 3}]
       ctx = Context.new(base ++ ctx_dot)
       since = Context.new(base ++ since_dot)
-      assert Context.delta_since(ctx, since) |> Context.eq?(Context.new(ctx_dot))
+      assert Context.since(ctx, since) |> Context.eq?(Context.new(ctx_dot))
     end
 
     test "drops empty replica entries from the delta" do
       ctx = Context.new([{"a", 1}, {"b", 2}])
       since = Context.new([{"a", 1}])
 
-      assert Context.delta_since(ctx, since) |> Context.eq?(Context.new([{"b", 2}]))
+      assert Context.since(ctx, since) |> Context.eq?(Context.new([{"b", 2}]))
     end
 
     test "ignores dots that are only present in since-context" do
       ctx = Context.new([{"a", 1}])
       since = Context.new([{"a", 1}, {"b", 2}])
 
-      assert Context.delta_since(ctx, since) |> Context.empty?()
+      assert Context.since(ctx, since) |> Context.empty?()
     end
 
     test "returns empty when since is ahead on the same replica" do
       ctx = Context.new([{"a", 1}])
       since = Context.new([{"a", 1}, {"a", 2}])
 
-      assert Context.delta_since(ctx, since) |> Context.empty?()
+      assert Context.since(ctx, since) |> Context.empty?()
     end
   end
 

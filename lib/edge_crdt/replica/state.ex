@@ -3,11 +3,11 @@ defmodule EdgeCrdt.Replica.State do
   Internal state and pure update operations for `EdgeCrdt.Replica`.
   """
 
-  alias EdgeCrdt.Context
   alias EdgeCrdt.Crdt
   alias EdgeCrdt.Dot
   alias EdgeCrdt.Replica
   alias EdgeCrdt.Replica.Components
+  alias EdgeCrdt.Replica.Context
 
   @typedoc """
   Internal state of replica.

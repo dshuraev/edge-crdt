@@ -5,7 +5,7 @@ defmodule EdgeCrdt.Crdt do
 
   use Facade
 
-  alias EdgeCrdt.Context
+  alias EdgeCrdt.Replica.Context
 
   @typedoc """
   Local ID of the CRDT type within the `EdgeCrdt.Replica`.

@@ -5,8 +5,8 @@ defmodule EdgeCrdt.Crdt.GCounter do
 
   @behaviour EdgeCrdt.Crdt
 
-  alias EdgeCrdt.Context
   alias EdgeCrdt.Replica
+  alias EdgeCrdt.Replica.Context
   alias PathMap
 
   @vsn 1
