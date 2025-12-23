@@ -3,6 +3,13 @@
 This document defines how agents—human and automated—operate within this codebase.  
 It follows **Extreme Programming (XP)** principles (communication, simplicity, feedback, courage, respect) and adopts **Conventional Commits** for clear traceability.
 
+## Code Style
+
+- Prefer Elixir functions over Erlang's
+- Prefer multiple clauses over long functions
+- Low cyclometric complexity
+- `{:error, reason}` over plain `:error` for error handling
+
 ## Roles
 
 - **Feature Agent (developer or pair):**  
