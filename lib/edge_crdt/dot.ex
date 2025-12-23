@@ -6,7 +6,8 @@ defmodule EdgeCrdt.Dot do
   """
   alias EdgeCrdt.Replica
 
-  @type t :: {Replica.id(), pos_integer()}
+  @type counter :: non_neg_integer()
+  @type t :: {Replica.id(), counter()}
 
   @doc """
   Create a new dot. Checks that the dot parameters are formally valid.
