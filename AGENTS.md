@@ -9,6 +9,7 @@ It follows **Extreme Programming (XP)** principles (communication, simplicity, f
 - Prefer multiple clauses over long functions
 - Low cyclometric complexity
 - `{:error, reason}` over plain `:error` for error handling
+- Do not redefine types. If `Dot` defines `Dot.t() :: {Replica.id(), counter()}`, do not redefine `dot` type.
 
 ## Roles
 
