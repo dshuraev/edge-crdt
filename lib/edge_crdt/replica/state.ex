@@ -8,6 +8,7 @@ defmodule EdgeCrdt.Replica.State do
   alias EdgeCrdt.Replica
   alias EdgeCrdt.Replica.Components
   alias EdgeCrdt.Replica.Context
+  alias EdgeCrdt.Replica.DeltaBundle
 
   @typedoc """
   Internal state of replica.
@@ -221,4 +222,50 @@ defmodule EdgeCrdt.Replica.State do
 
   def apply_remote(%__MODULE__{}, _crdt_id, bad_dot, _delta),
     do: {:error, {:invalid_dot, bad_dot}}
+
+  @doc """
+  Compute a per-CRDT digest of locally-originated updates.
+
+  This summary can be used for anti-entropy to request missing deltas from this
+  replica for each CRDT.
+  """
+  @spec digest(t()) :: Replica.Digest.t()
+  def digest(%__MODULE__{id: replica_id, crdts: crdts, ctx: ctx})
+      when is_binary(replica_id) and is_map(crdts) do
+    max_counter = Context.max_for(ctx, replica_id)
+    Enum.reduce(crdts, %{}, fn {crdt_id, _val}, acc -> Map.put(acc, crdt_id, {replica_id, max_counter}) end)
+  end
+
+  @doc """
+  Extract deltas originated by this replica since the given digest.
+  """
+  @spec delta(t(), Replica.Digest.t()) :: DeltaBundle.t()
+  def delta(
+        %__MODULE__{id: replica_id, crdts: crdts, components: %Components{by_crdt: by_crdt}},
+        since_digest
+      )
+      when is_binary(replica_id) and is_map(crdts) and is_map(since_digest) do
+    Enum.reduce(crdts, %{}, fn {crdt_id, _val}, acc ->
+      counter_exclusive =
+        case Map.fetch(since_digest, crdt_id) do
+          {:ok, {_origin, counter}} when is_integer(counter) and counter >= 0 -> counter
+          _ -> 0
+        end
+
+      origin_components =
+        by_crdt
+        |> Map.get(crdt_id, %{})
+        |> Map.get(replica_id, %{})
+
+      items =
+        for {counter, delta} <- origin_components, counter > counter_exclusive do
+          {{replica_id, counter}, delta}
+        end
+
+      case items do
+        [] -> acc
+        _ -> Map.put(acc, crdt_id, items)
+      end
+    end)
+  end
 end

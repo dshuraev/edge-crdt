@@ -57,6 +57,65 @@ defmodule EdgeCrdt.Replica.Components do
     end
   end
 
+  @spec since(t(), Replica.Digest.t()) :: DeltaBundle.t()
+  def since(%__MODULE__{} = cs, since_digest) when is_map(since_digest) and map_size(since_digest) == 0 do
+    Enum.reduce(cs.by_crdt, %{}, fn {crdt_id, origins_map}, acc ->
+      items = items_all_origins(origins_map)
+      if items == [], do: acc, else: Map.put(acc, crdt_id, items)
+    end)
+  end
+
+  def since(%__MODULE__{} = cs, since_digest) when is_map(since_digest) do
+    default_origin = first_origin(since_digest)
+
+    Enum.reduce(cs.by_crdt, %{}, fn {crdt_id, origins_map}, acc ->
+        {origin_for_crdt, counter_exclusive} =
+          case Map.get(since_digest, crdt_id) do
+            {origin, counter} when is_binary(origin) and is_integer(counter) and counter >= 0 ->
+              {origin, counter}
+
+            _ ->
+              {default_origin, 0}
+          end
+
+        items =
+          if is_binary(origin_for_crdt) do
+            items_for_origin_since(origins_map, origin_for_crdt, counter_exclusive)
+          else
+            items_all_origins(origins_map)
+          end
+
+        if items == [], do: acc, else: Map.put(acc, crdt_id, items)
+    end)
+  end
+
+  defp first_origin(digest) do
+    Enum.reduce_while(digest, nil, fn
+      {_crdt_id, {origin, _counter}}, _acc when is_binary(origin) -> {:halt, origin}
+      {_crdt_id, _bad_dot}, acc -> {:cont, acc}
+    end)
+  end
+
+  defp items_for_origin_since(origins_map, origin, counter_exclusive) do
+    origins_map
+    |> Map.get(origin, %{})
+    |> Enum.reduce([], fn {counter, delta}, items_acc ->
+        if counter > counter_exclusive do
+          [{{origin, counter}, delta} | items_acc]
+        else
+          items_acc
+        end
+    end)
+  end
+
+  defp items_all_origins(origins_map) do
+    Enum.reduce(origins_map, [], fn {origin, counters_map}, items_acc ->
+      Enum.reduce(counters_map, items_acc, fn {counter, delta}, items_inner_acc ->
+        [{{origin, counter}, delta} | items_inner_acc]
+      end)
+    end)
+  end
+
   @spec origins(t(), Crdt.id()) :: [origin()]
   def origins(%__MODULE__{} = cs, crdt_id) when is_binary(crdt_id) do
     cs.by_crdt |> Map.get(crdt_id, %{}) |> Map.keys()

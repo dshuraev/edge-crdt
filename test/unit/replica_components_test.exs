@@ -43,4 +43,44 @@ defmodule EdgeCrdtTest.Unit.ReplicaComponentsTest do
 
     assert Enum.sort(Components.origins(cs2, "crdt-1")) == ["replica-a", "replica-b"]
   end
+
+  describe "since/2" do
+    test "returns deltas for digest origin since counters, defaulting missing CRDTs to 0" do
+      cs0 = Components.new()
+
+      cs =
+        cs0
+        |> Components.append("crdt-1", "replica-a", 1, :a1)
+        |> Components.append("crdt-1", "replica-a", 3, :a3)
+        |> Components.append("crdt-1", "replica-b", 2, :b2)
+        |> Components.append("crdt-2", "replica-a", 2, :a2_crdt2)
+
+      digest = %{"crdt-1" => {"replica-a", 1}}
+
+      bundle = Components.since(cs, digest)
+
+      assert Map.new(Map.fetch!(bundle, "crdt-1")) == %{{"replica-a", 3} => :a3}
+      assert Map.new(Map.fetch!(bundle, "crdt-2")) == %{{"replica-a", 2} => :a2_crdt2}
+      refute Map.has_key?(bundle, "crdt-3")
+    end
+
+    test "returns everything when digest is empty" do
+      cs0 = Components.new()
+
+      cs =
+        cs0
+        |> Components.append("crdt-1", "replica-a", 1, :a1)
+        |> Components.append("crdt-1", "replica-b", 2, :b2)
+        |> Components.append("crdt-2", "replica-a", 3, :a3)
+
+      bundle = Components.since(cs, %{})
+
+      assert Map.new(Map.fetch!(bundle, "crdt-1")) == %{
+               {"replica-a", 1} => :a1,
+               {"replica-b", 2} => :b2
+             }
+
+      assert Map.new(Map.fetch!(bundle, "crdt-2")) == %{{"replica-a", 3} => :a3}
+    end
+  end
 end
