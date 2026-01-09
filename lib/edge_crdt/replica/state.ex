@@ -69,12 +69,14 @@ defmodule EdgeCrdt.Replica.State do
     if not overwrite and Map.has_key?(crdts, id) do
       {:error, :already_exists}
     else
-      if function_exported?(type, :zero, 0) do
-        crdt = Keyword.get(opts, :initial_state, Crdt.zero(type))
-        new_crdts = Map.put(crdts, id, {type, crdt, meta})
-        {:ok, %__MODULE__{state | crdts: new_crdts}}
-      else
-        {:error, {:implementation_missing, type, [{:zero, 0}]}}
+      case Crdt.validate(type) do
+        :ok ->
+          crdt = Keyword.get(opts, :initial_state, Crdt.zero(type))
+          new_crdts = Map.put(crdts, id, {type, crdt, meta})
+          {:ok, %__MODULE__{state | crdts: new_crdts}}
+
+        {:error, missing} ->
+          {:error, {:implementation_missing, type, missing}}
       end
     end
   end
