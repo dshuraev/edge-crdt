@@ -41,7 +41,7 @@ defmodule EdgeCrdt.Replica.State do
   @spec new(Replica.id(), Keyword.t()) :: t() | {:error, {:invalid_id, Replica.id()}}
   def new(id, opts \\ [])
 
-  def new(id, opts) when is_binary(id) do
+  def new(id = <<_::16*8>>, opts) do
     %__MODULE__{
       id: id,
       crdts: %{},

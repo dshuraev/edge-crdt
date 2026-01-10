@@ -4,6 +4,9 @@ defmodule EdgeCrdtTest.Unit.ContextTest do
   doctest EdgeCrdt.Replica.Context
   alias EdgeCrdt.Replica.Context
 
+  @replica_a "000000000000000a"
+  @replica_b "000000000000000b"
+
   describe "new/0" do
     test "creates an empty context struct" do
       assert Context.new() |> Context.empty?()
@@ -16,15 +19,16 @@ defmodule EdgeCrdtTest.Unit.ContextTest do
     end
 
     test "creates context from enumerable of dots" do
-      assert Context.new([{"a", 1}, {"b", 42}]) |> Context.contains?({"b", 42})
+      assert Context.new([{@replica_a, 1}, {@replica_b, 42}])
+             |> Context.contains?({@replica_b, 42})
     end
 
     test "deduplicates dots for the same replica" do
-      ctx = Context.new([{"a", 1}, {"a", 1}, {"a", 2}])
+      ctx = Context.new([{@replica_a, 1}, {@replica_a, 1}, {@replica_a, 2}])
 
-      assert Context.contains?(ctx, {"a", 1})
-      assert Context.contains?(ctx, {"a", 2})
-      assert Context.new([{"a", 1}, {"a", 2}]) |> Context.eq?(ctx)
+      assert Context.contains?(ctx, {@replica_a, 1})
+      assert Context.contains?(ctx, {@replica_a, 2})
+      assert Context.new([{@replica_a, 1}, {@replica_a, 2}]) |> Context.eq?(ctx)
     end
   end
 
@@ -34,22 +38,22 @@ defmodule EdgeCrdtTest.Unit.ContextTest do
     end
 
     test "returns true when two contexts are equal" do
-      dots = [{"a", 1}, {"b", 42}]
+      dots = [{@replica_a, 1}, {@replica_b, 42}]
       context1 = Context.new(dots)
       context2 = Context.new(dots)
       assert Context.eq?(context1, context2)
     end
 
     test "returns false when two context differ" do
-      dots = [{"a", 1}]
+      dots = [{@replica_a, 1}]
       context1 = Context.new(dots)
-      context2 = Context.new([{"b", 42}] ++ dots)
+      context2 = Context.new([{@replica_b, 42}] ++ dots)
       refute Context.eq?(context1, context2)
     end
 
     test "ignores ordering of dots" do
-      context1 = Context.new([{"a", 1}, {"b", 2}, {"a", 3}])
-      context2 = Context.new([{"a", 3}, {"b", 2}, {"a", 1}])
+      context1 = Context.new([{@replica_a, 1}, {@replica_b, 2}, {@replica_a, 3}])
+      context2 = Context.new([{@replica_a, 3}, {@replica_b, 2}, {@replica_a, 1}])
 
       assert Context.eq?(context1, context2)
     end
@@ -61,41 +65,41 @@ defmodule EdgeCrdtTest.Unit.ContextTest do
     end
 
     test "returns false if two contexts are equal" do
-      dots = [{"a", 1}, {"b", 42}]
+      dots = [{@replica_a, 1}, {@replica_b, 42}]
       context1 = Context.new(dots)
       context2 = Context.new(dots)
       refute Context.lt?(context1, context2)
     end
 
     test "returns true if the first context is a strict subset of the second" do
-      dots = [{"a", 1}]
+      dots = [{@replica_a, 1}]
       context1 = Context.new(dots)
-      context2 = Context.new([{"a", 2} | dots])
+      context2 = Context.new([{@replica_a, 2} | dots])
       assert Context.lt?(context1, context2)
     end
 
     test "returns false if the first context is greater than the second" do
-      dots = [{"a", 1}]
+      dots = [{@replica_a, 1}]
       context1 = Context.new(dots)
-      context2 = Context.new([{"a", 2} | dots])
+      context2 = Context.new([{@replica_a, 2} | dots])
       refute Context.lt?(context2, context1)
     end
 
     test "considers dots grouped by replica" do
-      context1 = Context.new([{"a", 1}, {"b", 1}])
-      context2 = Context.new([{"a", 1}, {"a", 2}, {"b", 1}])
+      context1 = Context.new([{@replica_a, 1}, {@replica_b, 1}])
+      context2 = Context.new([{@replica_a, 1}, {@replica_a, 2}, {@replica_b, 1}])
 
       assert Context.lt?(context1, context2)
     end
 
     test "treats empty as smaller than non-empty" do
       refute Context.lt?(Context.new(), Context.new())
-      assert Context.lt?(Context.new(), Context.new([{"a", 1}]))
+      assert Context.lt?(Context.new(), Context.new([{@replica_a, 1}]))
     end
 
     test "returns false when a replica is missing progress" do
-      left = Context.new([{"a", 1}])
-      right = Context.new([{"b", 1}])
+      left = Context.new([{@replica_a, 1}])
+      right = Context.new([{@replica_b, 1}])
 
       refute Context.lt?(left, right)
       refute Context.lt?(right, left)
@@ -105,41 +109,41 @@ defmodule EdgeCrdtTest.Unit.ContextTest do
   describe "since/2" do
     test "when called on empty context always returns empty context" do
       assert Context.since(Context.new(), Context.new()) |> Context.empty?()
-      assert Context.since(Context.new(), Context.new([{"a", 1}])) |> Context.empty?()
+      assert Context.since(Context.new(), Context.new([{@replica_a, 1}])) |> Context.empty?()
     end
 
     test "when called with empty since-context returns original context" do
-      dots = [{"a", 1}]
+      dots = [{@replica_a, 1}]
       context1 = Context.new(dots)
       assert Context.since(context1, Context.new()) |> Context.eq?(context1)
     end
 
     test "returns dots not present in since-context" do
-      base = [{"a", 1}]
-      ctx_dot = [{"b", 2}]
-      since_dot = [{"b", 3}]
+      base = [{@replica_a, 1}]
+      ctx_dot = [{@replica_b, 2}]
+      since_dot = [{@replica_b, 3}]
       ctx = Context.new(base ++ ctx_dot)
       since = Context.new(base ++ since_dot)
       assert Context.since(ctx, since) |> Context.eq?(Context.new(ctx_dot))
     end
 
     test "drops empty replica entries from the delta" do
-      ctx = Context.new([{"a", 1}, {"b", 2}])
-      since = Context.new([{"a", 1}])
+      ctx = Context.new([{@replica_a, 1}, {@replica_b, 2}])
+      since = Context.new([{@replica_a, 1}])
 
-      assert Context.since(ctx, since) |> Context.eq?(Context.new([{"b", 2}]))
+      assert Context.since(ctx, since) |> Context.eq?(Context.new([{@replica_b, 2}]))
     end
 
     test "ignores dots that are only present in since-context" do
-      ctx = Context.new([{"a", 1}])
-      since = Context.new([{"a", 1}, {"b", 2}])
+      ctx = Context.new([{@replica_a, 1}])
+      since = Context.new([{@replica_a, 1}, {@replica_b, 2}])
 
       assert Context.since(ctx, since) |> Context.empty?()
     end
 
     test "returns empty when since is ahead on the same replica" do
-      ctx = Context.new([{"a", 1}])
-      since = Context.new([{"a", 1}, {"a", 2}])
+      ctx = Context.new([{@replica_a, 1}])
+      since = Context.new([{@replica_a, 1}, {@replica_a, 2}])
 
       assert Context.since(ctx, since) |> Context.empty?()
     end
@@ -147,16 +151,16 @@ defmodule EdgeCrdtTest.Unit.ContextTest do
 
   describe "join/2" do
     test "unions dots from both contexts" do
-      ctx_a = Context.new([{"a", 1}])
-      ctx_b = Context.new([{"a", 2}, {"b", 1}])
+      ctx_a = Context.new([{@replica_a, 1}])
+      ctx_b = Context.new([{@replica_a, 2}, {@replica_b, 1}])
 
       assert Context.join(ctx_a, ctx_b)
-             |> Context.eq?(Context.new([{"a", 1}, {"a", 2}, {"b", 1}]))
+             |> Context.eq?(Context.new([{@replica_a, 1}, {@replica_a, 2}, {@replica_b, 1}]))
     end
 
     test "is commutative and idempotent" do
-      ctx_a = Context.new([{"a", 1}])
-      ctx_b = Context.new([{"a", 2}, {"b", 1}])
+      ctx_a = Context.new([{@replica_a, 1}])
+      ctx_b = Context.new([{@replica_a, 2}, {@replica_b, 1}])
 
       assert Context.join(ctx_a, ctx_b) |> Context.eq?(Context.join(ctx_b, ctx_a))
       assert Context.join(ctx_a, ctx_a) |> Context.eq?(ctx_a)

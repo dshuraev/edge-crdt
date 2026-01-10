@@ -6,7 +6,10 @@ defmodule EdgeCrdt.Replica do
   alias EdgeCrdt.Crdt
   alias EdgeCrdt.Replica.State
 
-  @type id :: binary()
+  @typedoc """
+  16-byte unique identifier for a replica (UUIDv4).
+  """
+  @type id :: <<_::16*8>>
 
   use GenServer
 
@@ -159,8 +162,12 @@ defmodule EdgeCrdt.Replica do
 
   defp initial_state(opts) when is_list(opts) do
     case Keyword.get(opts, :state) do
-      %{__struct__: EdgeCrdt.Replica.State} = state ->
-        {:ok, state}
+      %State{id: id} = state ->
+        if byte_size(id) != 16 do
+          {:error, {:invalid_id, id}}
+        else
+          {:ok, state}
+        end
 
       nil ->
         with {:ok, id} <- Keyword.fetch(opts, :id),
