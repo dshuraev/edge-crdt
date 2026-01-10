@@ -44,6 +44,11 @@ defmodule EdgeCrdt.Crdt do
   """
   @type value :: term()
 
+  @typedoc """
+  Wire representation of the CRDT state.
+  """
+  @type encoded :: binary()
+
   @doc """
   Returns the lattice bottom element for the CRDT.
   """
@@ -84,4 +89,14 @@ defmodule EdgeCrdt.Crdt do
   events and snapshots so readers can validate compatibility.
   """
   defapi(version() :: 0..0xFFFF)
+
+  @doc """
+  Encodes the CRDT state into a versioned wire format.
+  """
+  defapi(encode(state :: state()) :: result(encoded()))
+
+  @doc """
+  Decodes a CRDT state from a versioned wire format.
+  """
+  defapi(decode(encoded :: encoded()) :: result(state()))
 end

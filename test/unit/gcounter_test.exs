@@ -55,4 +55,50 @@ defmodule EdgeCrdtTest.Unit.GCounterTest do
 
     assert {:ok, ^joined1} = Crdt.apply_delta(GCounter, left, right, ctx)
   end
+
+  test "encode/1 and decode/1 round-trip empty state" do
+    state = Crdt.zero(GCounter)
+
+    assert {:ok, bin} = GCounter.encode(state)
+    assert {:ok, ^state} = GCounter.decode(bin)
+  end
+
+  test "encode/1 and decode/1 round-trip multiple entries deterministically" do
+    state = %{@replica_b => 2, @replica_a => 1}
+
+    assert {:ok, bin} = GCounter.encode(state)
+    assert {:ok, decoded} = GCounter.decode(bin)
+    assert decoded == state
+  end
+
+  test "encode/1 rejects invalid entries (negatives and types)" do
+    assert {:error, {:invalid_entry, {_, -1}}} =
+             GCounter.encode(%{@replica_a => -1})
+
+    assert {:error, {:invalid_entry, {123, 1}}} =
+             GCounter.encode(%{123 => 1})
+
+    assert {:error, {:invalid_entry, {_, _}}} =
+             GCounter.encode(%{@replica_a => 0x1_0000_0000_0000_0000})
+  end
+
+  test "decode/1 rejects unsupported version" do
+    bad = <<(GCounter.version() + 1)::16, 0::32>>
+    assert {:error, {:unsupported_version, _}} = GCounter.decode(bad)
+  end
+
+  test "decode/1 rejects duplicate replica ids" do
+    bin =
+      <<GCounter.version()::16, 2::32, 1::16, "a", 1::64, 1::16, "a", 2::64>>
+
+    assert {:error, {:invalid_encoding, {:duplicate_replica, "a"}}} = GCounter.decode(bin)
+  end
+
+  test "decode/1 rejects trailing bytes and truncated payloads" do
+    trailing = <<GCounter.version()::16, 0::32, 1::8>>
+    assert {:error, {:invalid_encoding, :trailing_bytes}} = GCounter.decode(trailing)
+
+    truncated = <<GCounter.version()::16, 1::32, 1::16>>
+    assert {:error, {:invalid_encoding, :truncated}} = GCounter.decode(truncated)
+  end
 end

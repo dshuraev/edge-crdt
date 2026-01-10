@@ -67,8 +67,80 @@ defmodule EdgeCrdt.Crdt.GCounter do
   @impl EdgeCrdt.Crdt
   def version, do: @vsn
 
+  @impl EdgeCrdt.Crdt
+  @spec encode(t()) :: {:ok, binary()} | {:error, term()}
+  def encode(state) when is_map(state) do
+    entries =
+      state
+      |> Map.to_list()
+      |> Enum.sort_by(fn {replica_id, _} -> replica_id end)
+
+    with :ok <- validate_entries(entries),
+         {:ok, entries_bin} <- encode_entries(entries, <<>>) do
+      {:ok, <<@vsn::16, length(entries)::32, entries_bin::binary>>}
+    end
+  end
+
+  def encode(state), do: {:error, {:invalid_state, state}}
+
+  @impl EdgeCrdt.Crdt
+  @spec decode(binary()) :: {:ok, t()} | {:error, term()}
+  def decode(<<@vsn::16, count::32, rest::binary>>) do
+    decode_entries(rest, count, %{})
+  end
+
+  def decode(<<version::16, _rest::binary>>), do: {:error, {:unsupported_version, version}}
+  def decode(other), do: {:error, {:invalid_encoding, other}}
+
   defp put_max(state, replica_id, incoming) do
     {:ok, state} = PathMap.update_auto(state, [replica_id], 0, &max(&1, incoming))
     state
   end
+
+  defp validate_entries(entries) do
+    Enum.reduce_while(entries, :ok, fn
+      {replica_id, counter}, :ok
+      when is_binary(replica_id) and is_integer(counter) and counter >= 0 and
+             counter <= 0xFFFF_FFFF_FFFF_FFFF ->
+        {:cont, :ok}
+
+      entry, :ok ->
+        {:halt, {:error, {:invalid_entry, entry}}}
+    end)
+  end
+
+  defp encode_entries([], acc), do: {:ok, acc}
+
+  defp encode_entries([{replica_id, counter} | rest], acc) do
+    id_len = byte_size(replica_id)
+
+    entry =
+      <<id_len::16, replica_id::binary-size(id_len), counter::unsigned-64>>
+
+    encode_entries(rest, <<acc::binary, entry::binary>>)
+  end
+
+  defp decode_entries(rest, 0, acc) do
+    case rest do
+      <<>> -> {:ok, acc}
+      _ -> {:error, {:invalid_encoding, :trailing_bytes}}
+    end
+  end
+
+  defp decode_entries(<<id_len::16, rest::binary>>, count, acc)
+       when count > 0 do
+    case rest do
+      <<replica_id::binary-size(id_len), counter::unsigned-64, tail::binary>> ->
+        if Map.has_key?(acc, replica_id) do
+          {:error, {:invalid_encoding, {:duplicate_replica, replica_id}}}
+        else
+          decode_entries(tail, count - 1, Map.put(acc, replica_id, counter))
+        end
+
+      _ ->
+        {:error, {:invalid_encoding, :truncated}}
+    end
+  end
+
+  defp decode_entries(_rest, _count, _acc), do: {:error, {:invalid_encoding, :truncated}}
 end

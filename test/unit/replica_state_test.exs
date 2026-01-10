@@ -11,6 +11,8 @@ defmodule EdgeCrdtTest.Unit.ReplicaStateTest do
   defmodule TestCrdt do
     def zero, do: :zero
     def version, do: 0
+    def encode(_state), do: {:ok, <<0::16, 0::32>>}
+    def decode(_encoded), do: {:ok, :zero}
     def value(_state), do: :zero
     def mutate(state, _op, _dot), do: {:ok, {state, :delta}}
     def join(left, _right), do: {:ok, left}
