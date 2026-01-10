@@ -9,6 +9,9 @@ defmodule Mix.Tasks.Demo do
   alias EdgeCrdt.Crdt.GCounter
   alias EdgeCrdt.Replica.State
 
+  @replica_a "000000000000000a"
+  @replica_b "000000000000000b"
+
   @shortdoc "Runs a minimal two-replica convergence demo"
   @impl Mix.Task
   def run(_args) do
@@ -27,8 +30,8 @@ defmodule Mix.Tasks.Demo do
   end
 
   defp bootstrap do
-    state_a = State.new("replica-a")
-    state_b = State.new("replica-b")
+    state_a = State.new(@replica_a)
+    state_b = State.new(@replica_b)
 
     {:ok, state_a} = State.add_crdt(state_a, "count", GCounter)
     {:ok, state_b} = State.add_crdt(state_b, "count", GCounter)
