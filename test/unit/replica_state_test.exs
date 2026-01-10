@@ -6,6 +6,12 @@ defmodule EdgeCrdtTest.Unit.ReplicaStateTest do
 
   defmodule TestCrdt do
     def zero, do: :zero
+    def version, do: 0
+    def value(_state), do: :zero
+    def mutate(state, _op, _dot), do: {:ok, {state, :delta}}
+    def join(left, _right), do: {:ok, left}
+    def context(_state), do: EdgeCrdt.Replica.Context.new()
+    def apply_delta(state, _delta, _ctx), do: {:ok, state}
   end
 
   defmodule NoZeroCrdt do
@@ -23,8 +29,10 @@ defmodule EdgeCrdtTest.Unit.ReplicaStateTest do
     test "returns {:error, reason} when CRDT cannot be created" do
       state = State.new("replica-a")
 
-      assert {:error, {:implementation_missing, NoZeroCrdt, [{:zero, 0}]}} =
+      assert {:error, {:implementation_missing, NoZeroCrdt, missing}} =
                State.ensure_crdt(state, "crdt-1", NoZeroCrdt)
+
+      assert {:zero, 0} in missing
     end
   end
 
