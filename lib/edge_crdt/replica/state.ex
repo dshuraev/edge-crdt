@@ -19,8 +19,9 @@ defmodule EdgeCrdt.Replica.State do
   - `:components` - nested map of components (deltas) produced by every update,
     keyed by CRDT ID and replica ID that originated the update.
   - `:policy` - map of policy flags (max log size, GC policy, etc.)
+  - `:transport_pid` - optional PID of transport process used for inter-replica communication
   """
-  defstruct [:id, :crdts, :ctx, :components, :policy]
+  defstruct [:id, :crdts, :ctx, :components, :policy, :transport_pid]
 
   @type meta :: map()
   @type policy :: map()
@@ -30,7 +31,8 @@ defmodule EdgeCrdt.Replica.State do
           crdts: %{Crdt.id() => {Crdt.type(), Crdt.state(), meta()}},
           ctx: Context.t(),
           components: Components.t(),
-          policy: policy()
+          policy: policy(),
+          transport_pid: pid() | nil
         }
 
   @doc """
@@ -45,7 +47,8 @@ defmodule EdgeCrdt.Replica.State do
       crdts: %{},
       ctx: Context.new(),
       components: Components.new(),
-      policy: Map.new(opts)
+      policy: Map.new(opts),
+      transport_pid: Keyword.get(opts, :transport_pid, nil)
     }
   end
 
@@ -235,7 +238,10 @@ defmodule EdgeCrdt.Replica.State do
   def digest(%__MODULE__{id: replica_id, crdts: crdts, ctx: ctx})
       when is_binary(replica_id) and is_map(crdts) do
     max_counter = Context.max_for(ctx, replica_id)
-    Enum.reduce(crdts, %{}, fn {crdt_id, _val}, acc -> Map.put(acc, crdt_id, {replica_id, max_counter}) end)
+
+    Enum.reduce(crdts, %{}, fn {crdt_id, _val}, acc ->
+      Map.put(acc, crdt_id, {replica_id, max_counter})
+    end)
   end
 
   @doc """
