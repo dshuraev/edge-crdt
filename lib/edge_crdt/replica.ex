@@ -160,6 +160,12 @@ defmodule EdgeCrdt.Replica do
     end
   end
 
+  @impl GenServer
+  def handle_info({:edge_crdt_transport, _transport, _peer, _message}, state) do
+    # Transport handlers will be added once the sync protocol is defined.
+    {:noreply, state}
+  end
+
   defp initial_state(opts) when is_list(opts) do
     case Keyword.get(opts, :state) do
       %State{id: id} = state ->

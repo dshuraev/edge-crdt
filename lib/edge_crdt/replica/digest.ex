@@ -14,6 +14,41 @@ defmodule EdgeCrdt.Replica.Digest do
   alias EdgeCrdt.Dot
 
   @type t :: %{Crdt.id() => Dot.t()}
+  @type encoded :: binary()
+
+  @vsn 1
+
+  @doc """
+  Encodes a digest into a deterministic binary format.
+
+  The encoding is ordered by CRDT id (binary sort order) and does not depend on
+  BEAM term serialization.
+  """
+  @spec encode(t()) :: {:ok, encoded()} | {:error, term()}
+  def encode(digest) when is_map(digest) do
+    entries =
+      digest
+      |> Map.to_list()
+      |> Enum.sort_by(fn {crdt_id, {origin, _counter}} -> {crdt_id, origin} end)
+
+    with :ok <- validate_entries(entries),
+         {:ok, entries_bin} <- encode_entries(entries, <<>>) do
+      {:ok, <<@vsn::16, length(entries)::32, entries_bin::binary>>}
+    end
+  end
+
+  def encode(other), do: {:error, {:invalid_digest, other}}
+
+  @doc """
+  Decodes a digest from the deterministic binary format.
+  """
+  @spec decode(encoded()) :: {:ok, t()} | {:error, term()}
+  def decode(<<@vsn::16, count::32, rest::binary>>) do
+    decode_entries(rest, count, %{})
+  end
+
+  def decode(<<version::16, _rest::binary>>), do: {:error, {:unsupported_version, version}}
+  def decode(other), do: {:error, {:invalid_encoding, other}}
 
   @doc """
   Merge two digests by taking the maximum counter per CRDT.
@@ -116,5 +151,59 @@ defmodule EdgeCrdt.Replica.Digest do
         true -> {:halt, false}
       end
     end)
+  end
+
+  defp validate_entries(entries) do
+    Enum.reduce_while(entries, :ok, fn
+      {crdt_id, {origin, counter}}, :ok
+      when is_binary(crdt_id) and is_binary(origin) and is_integer(counter) and counter >= 0 and
+             counter <= 0xFFFF_FFFF_FFFF_FFFF and byte_size(crdt_id) <= 0xFFFF and
+             byte_size(origin) <= 0xFFFF ->
+        {:cont, :ok}
+
+      entry, :ok ->
+        {:halt, {:error, {:invalid_entry, entry}}}
+    end)
+  end
+
+  defp encode_entries([], acc), do: {:ok, acc}
+
+  defp encode_entries([{crdt_id, {origin, counter}} | rest], acc) do
+    crdt_len = byte_size(crdt_id)
+    origin_len = byte_size(origin)
+
+    entry =
+      <<crdt_len::16, crdt_id::binary-size(crdt_len), origin_len::16,
+        origin::binary-size(origin_len), counter::unsigned-64>>
+
+    encode_entries(rest, <<acc::binary, entry::binary>>)
+  end
+
+  defp decode_entries(rest, 0, acc) do
+    case rest do
+      <<>> -> {:ok, acc}
+      _ -> {:error, {:invalid_encoding, :trailing_bytes}}
+    end
+  end
+
+  defp decode_entries(<<crdt_len::16, rest::binary>>, count, acc) when count > 0 do
+    with <<crdt_id::binary-size(crdt_len), origin_len::16, tail::binary>> <- rest,
+         <<origin::binary-size(origin_len), counter::unsigned-64, next::binary>> <- tail,
+         :ok <- ensure_unique_crdt(acc, crdt_id) do
+      decode_entries(next, count - 1, Map.put(acc, crdt_id, {origin, counter}))
+    else
+      {:error, _} = error -> error
+      _ -> {:error, {:invalid_encoding, :truncated}}
+    end
+  end
+
+  defp decode_entries(_rest, _count, _acc), do: {:error, {:invalid_encoding, :truncated}}
+
+  defp ensure_unique_crdt(acc, crdt_id) do
+    if Map.has_key?(acc, crdt_id) do
+      {:error, {:invalid_encoding, {:duplicate_crdt, crdt_id}}}
+    else
+      :ok
+    end
   end
 end

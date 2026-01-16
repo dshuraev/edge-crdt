@@ -2,6 +2,7 @@ defmodule EdgeCrdtTest.Unit.ReplicaStateTest do
   use ExUnit.Case, async: true
 
   alias EdgeCrdt.Crdt.GCounter
+  alias EdgeCrdt.Replica.Context
   alias EdgeCrdt.Replica.State
 
   @replica_id "000000000000000a"
@@ -16,7 +17,7 @@ defmodule EdgeCrdtTest.Unit.ReplicaStateTest do
     def value(_state), do: :zero
     def mutate(state, _op, _dot), do: {:ok, {state, :delta}}
     def join(left, _right), do: {:ok, left}
-    def context(_state), do: EdgeCrdt.Replica.Context.new()
+    def context(_state), do: Context.new()
     def apply_delta(state, _delta, _ctx), do: {:ok, state}
   end
 
